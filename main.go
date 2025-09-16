@@ -19,6 +19,7 @@ func readFile(path string) *os.File {
 func getLinesChannel(file io.ReadCloser) <- chan string {
 	lines := make(chan string)
 	go func() {
+		defer close(lines)
 		buf := make([]byte, 8)
 		str := ""
 		for {
@@ -35,12 +36,11 @@ func getLinesChannel(file io.ReadCloser) <- chan string {
 			if index == -1 {
 				str += string(buf[:8]);
 			} else {
-				str += string(buf[:index + 1]	)
+				str += string(buf[:index + 1])
 				lines <- str
 				str = string(buf[index + 1:])
 			}
 		}
-		close(lines)
 	}()
 	return lines
 }
