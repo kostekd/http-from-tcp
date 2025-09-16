@@ -45,7 +45,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer l.Close()
+	defer l.Close();
 	
 	for {
 		connection, err := l.Accept()
