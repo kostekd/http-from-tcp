@@ -8,6 +8,12 @@ import (
 )
 
 
+func listen[T any](chn <- chan T) {
+	for result := range chn {
+		fmt.Printf("%s\n", result)
+	}
+}
+
 func getLinesChannel(connection net.Conn) <- chan string {
 	lines := make(chan string)
 	go func() {
@@ -51,10 +57,10 @@ func main() {
 		if err != nil {
 			fmt.Print("awc")
 		}
-		fmt.Print("Connection has been accepted\n")
+		fmt.Print("connection accepted\n")
 		channel := getLinesChannel(connection)
 		listen(channel)
 		connection.Close()
-		fmt.Print("Connection has been closed\n")
+		fmt.Print("connection closed\n")
 	}
 }
