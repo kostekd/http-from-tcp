@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strings"
 )
@@ -19,7 +18,7 @@ func getLinesChannel(connection net.Conn) <- chan string {
 			buf := make([]byte, 8)
 			chunk, err := connection.Read(buf)
 			if err != nil && err != io.EOF {
-				log.Fatal(err)
+				fmt.Printf("dev:kostekd Error: %v\n", err)
 			}
 	
 			if chunk == 0 {
@@ -43,17 +42,19 @@ func getLinesChannel(connection net.Conn) <- chan string {
 func main() {
 	l, err := net.Listen("tcp", ":42069")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Print("lolol")
 	}
 	defer l.Close();
 	
 	for {
 		connection, err := l.Accept()
 		if err != nil {
-			log.Fatal(err)
+			fmt.Print("awc")
 		}
 		fmt.Print("Connection has been accepted\n")
 		channel := getLinesChannel(connection)
 		listen(channel)
+		connection.Close()
+		fmt.Print("Connection has been closed\n")
 	}
 }
