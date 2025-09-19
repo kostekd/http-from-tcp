@@ -8,29 +8,29 @@ import (
 )
 
 
-func listen[T any](chn <- chan T) {
+func listen[T string](chn <- chan T) {
 	for result := range chn {
-		fmt.Printf("%s\n", result)
+		fmt.Printf("%s", result)
 	}
 }
 
 func getLinesChannel(connection net.Conn) <- chan string {
 	lines := make(chan string)
 	go func() {
+		str := ""
 		defer close(lines)
 
-		str := ""
 		for {
 			buf := make([]byte, 8)
 			chunk, err := connection.Read(buf)
 			if err != nil && err != io.EOF {
 				fmt.Printf("dev:kostekd Error: %v\n", err)
 			}
-	
+			
 			if chunk == 0 {
+				lines <- str
 				break
 			}
-	
 			index := strings.Index(string(buf[:8]), "\n");
 			if index == -1 {
 				str += string(buf[:8]);
