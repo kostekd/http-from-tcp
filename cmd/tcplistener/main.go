@@ -48,14 +48,14 @@ func getLinesChannel(connection net.Conn) <- chan string {
 func main() {
 	l, err := net.Listen("tcp", ":42069")
 	if err != nil {
-		fmt.Print("lolol")
+		fmt.Print("Failed to start TCP listener on :42069\n")
 	}
 	defer l.Close();
 	
 	for {
 		connection, err := l.Accept()
 		if err != nil {
-			fmt.Print("awc")
+			fmt.Print("Error: failed to accept connection\n")
 		}
 		fmt.Print("connection accepted\n")
 		channel := getLinesChannel(connection)
