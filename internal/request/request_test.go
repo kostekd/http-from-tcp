@@ -56,6 +56,10 @@ func TestRequestLineParse(t *testing.T) {
 	// Test: Request line out of order
 	_, err = RequestFromReader(strings.NewReader("/coffee GET HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
 	require.Error(t, err)
+
+	// Test: Method is not capitalized
+	_, err = RequestFromReader(strings.NewReader("/coffee get HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
+	require.Error(t, err)
 }
 
 

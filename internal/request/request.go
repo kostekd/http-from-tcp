@@ -17,6 +17,16 @@ type RequestLine struct {
 	Method        string
 }
 
+func httpMethodParser(str string) (string, error) {
+	regex := regexp.MustCompile(`^[A-Z]+$`)
+
+	if(!regex.MatchString(str)) { 
+		return "", fmt.Errorf("invalid http method")
+	}
+
+	return str, nil
+}
+
 func httpVersionParser(str string) (string, error) {
     regex := regexp.MustCompile(`^HTTP/\d+(\.\d+)*$`)
 
@@ -37,6 +47,35 @@ func httpRequestTargetParser(str string) (string, error) {
 	return str, nil;
 }
 
+func parseRequestLine(str string) (*RequestLine, error) {
+	requestLine := s.Split(str, " ")
+
+	if len(requestLine) != 3 {
+		return nil, fmt.Errorf(`invalid request line format. Requires 3 properties. Received %d`, len(requestLine))	
+	}
+
+	method, err := httpMethodParser(requestLine[0])
+	if err != nil {
+		return nil, err
+	}
+
+	requestTarget, err := httpRequestTargetParser(requestLine[1])
+	if err != nil {
+		return nil, err
+	}
+
+	version, err := httpVersionParser(requestLine[2])
+	if err != nil {
+		return nil, err
+	}
+
+	return &RequestLine{
+		Method:        method,
+		RequestTarget: requestTarget,
+		HttpVersion:   version,
+	}, nil
+}
+
 func RequestFromReader(reader io.Reader) (*Request, error) {
     input, err := io.ReadAll(reader)
 
@@ -49,31 +88,11 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	if len(strs) < 1 {
 		return nil, fmt.Errorf("invalid format: Too few lines")
 	}
-	requestLine := s.Split(strs[0], " ")
+	requestLine, err := parseRequestLine(strs[0])
 
-	if len(requestLine) != 3 {
-		return nil, fmt.Errorf(`invalid request line format. Requires 3 properties. Received %d`, len(requestLine))	
-	}
-
-	//TODO: Validate that later with proper methods
-	method := requestLine[0]
-
-	requestTarget, err := httpRequestTargetParser(requestLine[1])
-	if err != nil {
-		return nil, err
-	}
-	version, err := httpVersionParser(requestLine[2])
 	if err != nil {
 		return nil, err
 	}
 
-	request := &Request{
-		RequestLine: RequestLine{
-			Method:        method,
-			RequestTarget: requestTarget,
-			HttpVersion:   version,
-		},
-	}
-
-	return request, nil
+	return &Request{*requestLine}, nil
 }
