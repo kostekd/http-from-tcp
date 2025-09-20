@@ -17,11 +17,21 @@ type RequestLine struct {
 	Method        string
 }
 
-func httpMethodParser(str string) (string, error) {
+func httpVersionParser(str string) (string, error) {
     regex := regexp.MustCompile(`^HTTP/\d+(\.\d+)*$`)
 
 	if(!regex.MatchString(str)) {
 		return "", fmt.Errorf("invalid HTTP version")
+	}
+
+	return s.Split(str, "/")[1], nil;
+}
+
+func httpRequestTargetParser(str string) (string, error) {
+	regex := regexp.MustCompile(`^/([A-Za-z0-9._~!$&'()*+,;=:@%-]*(/[A-Za-z0-9._~!$&'()*+,;=:@%-]*)*)(\?[A-Za-z0-9._~!$&'()*+,;=:@%/?-]*)?(#[A-Za-z0-9._~!$&'()*+,;=:@%/?-]*)?$`)
+
+	if(!regex.MatchString(str)) {
+		return "", fmt.Errorf("invalid request target")
 	}
 
 	return s.Split(str, "/")[1], nil;
@@ -47,16 +57,23 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		return nil, fmt.Errorf(`invalid request line format. Requires 3 properties. Received %d`, len(requestLine))	
 	}
 
-	httpMethod, err := httpMethodParser(requestLine[2])
+	//TODO: Validate that later with proper methods
+	method := requestLine[0]
+
+	requestTarget, err := httpRequestTargetParser(requestLine[1])
+	if err != nil {
+		return nil, err
+	}
+	version, err := httpVersionParser(requestLine[2])
 	if err != nil {
 		return nil, err
 	}
 
 	request := &Request{
 		RequestLine: RequestLine{
-			Method:        requestLine[0],
-			RequestTarget: requestLine[1],
-			HttpVersion:   httpMethod,
+			Method:        method,
+			RequestTarget: requestTarget,
+			HttpVersion:   version,
 		},
 	}
 
