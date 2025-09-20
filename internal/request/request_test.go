@@ -25,6 +25,22 @@ func TestRequestLineParse(t *testing.T) {
 	assert.Equal(t, "/coffee", r.RequestLine.RequestTarget)
 	assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
 
+	// Test: Good GET Request line with path and query params
+	r, err = RequestFromReader(strings.NewReader("GET /coffee?user=alice&age=30 HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	assert.Equal(t, "GET", r.RequestLine.Method)
+	assert.Equal(t, "/coffee?user=alice&age=30", r.RequestLine.RequestTarget)
+	assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
+
+	// Test: Good POST Request line with path and query params and body
+	r, err = RequestFromReader(strings.NewReader("POST /submit HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\nContent-Type: application/json\r\nContent-Length: 18\r\n\r\n{\"key\":\"value\"}\r\n"))
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	assert.Equal(t, "POST", r.RequestLine.Method)
+	assert.Equal(t, "/submit", r.RequestLine.RequestTarget)
+	assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
+
 	// Test: Too few  parts in request line
 	_, err = RequestFromReader(strings.NewReader("/coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
 	require.Error(t, err)
@@ -35,6 +51,10 @@ func TestRequestLineParse(t *testing.T) {
 
 	// Test: Invalid Http method
 	_, err = RequestFromReader(strings.NewReader("GET /coffee HTTP/1.1as\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
+	require.Error(t, err)
+
+	// Test: Request line out of order
+	_, err = RequestFromReader(strings.NewReader("/coffee GET HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"))
 	require.Error(t, err)
 }
 

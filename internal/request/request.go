@@ -34,7 +34,7 @@ func httpRequestTargetParser(str string) (string, error) {
 		return "", fmt.Errorf("invalid request target")
 	}
 
-	return s.Split(str, "/")[1], nil;
+	return str, nil;
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
@@ -44,9 +44,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		return nil, err
 	}
 
-	fmt.Printf("Raw input %s",input)
 	strs := s.Split(string(input), "\r\n")
-	fmt.Printf("Splits %s", strs[0])
 
 	if len(strs) < 1 {
 		return nil, fmt.Errorf("invalid format: Too few lines")
