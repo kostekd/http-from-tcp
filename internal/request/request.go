@@ -78,7 +78,6 @@ func parseRequestLine(str string) (*RequestLine, error) {
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
     input, err := io.ReadAll(reader)
-
 	if err != nil {
 		return nil, err
 	}
