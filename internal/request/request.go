@@ -7,8 +7,21 @@ import (
 	s "strings"
 )
 
+type State int
+
+const BUFFER_SIZE = 8
+
 type Request struct {
 	RequestLine RequestLine
+	// State values:
+	// 0 - initialized
+	// 1 - done
+	State 		int
+}
+
+//TODO: To implement
+func (r *Request) parse(data []byte) (int, error) { 
+	return 0, nil
 }
 
 type RequestLine struct {
@@ -47,51 +60,68 @@ func httpRequestTargetParser(str string) (string, error) {
 	return str, nil;
 }
 
-func parseRequestLine(str string) (*RequestLine, error) {
+func parseRequestLine(str string, request *Request) (int, error) {
+
+	if !s.Contains(str, "\r\n") {
+		return 0, nil
+	}
+
 	requestLine := s.Split(str, " ")
 
 	if len(requestLine) != 3 {
-		return nil, fmt.Errorf(`invalid request line format. Requires 3 properties. Received %d`, len(requestLine))	
+		return 0, fmt.Errorf(`invalid request line format. Requires 3 properties. Received %d`, len(requestLine))	
 	}
 
 	method, err := httpMethodParser(requestLine[0])
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	requestTarget, err := httpRequestTargetParser(requestLine[1])
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	version, err := httpVersionParser(requestLine[2])
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-
-	return &RequestLine{
+	request.RequestLine = RequestLine{
 		Method:        method,
 		RequestTarget: requestTarget,
 		HttpVersion:   version,
-	}, nil
+	}
+
+	return len(str), nil
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
-    input, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, err
+    //TODO: Do not load the whole input at once
+	// input, err := io.ReadAll(reader)
+
+	request := &Request{
+		State: 0,
+	}
+	readToIndex := 0
+
+	for {
+		buf := make([]byte, BUFFER_SIZE, BUFFER_SIZE)
+		chunk, err := reader.Read(buf)
+
+		if err != nil {
+			return nil, err
+		}
+		strs := s.Split(string(buf), "\r\n")
 	}
 
-	strs := s.Split(string(input), "\r\n")
 
 	if len(strs) < 1 {
 		return nil, fmt.Errorf("invalid format: Too few lines")
 	}
-	requestLine, err := parseRequestLine(strs[0])
-
+	n, err := parseRequestLine(strs[0], request)
+	fmt.Print(n)
 	if err != nil {
 		return nil, err
 	}
-
-	return &Request{*requestLine}, nil
+	return request, nil
 }
