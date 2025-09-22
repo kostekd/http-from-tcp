@@ -21,7 +21,7 @@ type Request struct {
 
 //TODO: To implement
 func (r *Request) parse(data []byte) (int, error) { 
-	return 0, nil
+	return parseRequestLine(string(data), r)
 }
 
 type RequestLine struct {
@@ -61,7 +61,6 @@ func httpRequestTargetParser(str string) (string, error) {
 }
 
 func parseRequestLine(str string, request *Request) (int, error) {
-
 	if !s.Contains(str, "\r\n") {
 		return 0, nil
 	}
@@ -103,25 +102,41 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		State: 0,
 	}
 	readToIndex := 0
+	buf := make([]byte, BUFFER_SIZE)
 
 	for {
-		buf := make([]byte, BUFFER_SIZE, BUFFER_SIZE)
 		chunk, err := reader.Read(buf)
-
 		if err != nil {
 			return nil, err
 		}
-		strs := s.Split(string(buf), "\r\n")
+
+		n, err := request.parse(buf)
+		if err != nil {
+			return nil, fmt.Errorf("err")
+		}
+
+		//no bytes actually parsed need to make buffer bigger
+		if n == 0 {
+			readToIndex += chunk
+			newBuf := make([]byte, len(buf) * 2)
+			copy(newBuf, buf)
+			buf = newBuf
+		}
+
+		if request.State == 1 {
+			break
+		}
+		// strs := s.Split(string(buf), "\r\n")
 	}
 
 
-	if len(strs) < 1 {
-		return nil, fmt.Errorf("invalid format: Too few lines")
-	}
-	n, err := parseRequestLine(strs[0], request)
-	fmt.Print(n)
-	if err != nil {
-		return nil, err
-	}
+	// if len(strs) < 1 {
+	// 	return nil, fmt.Errorf("invalid format: Too few lines")
+	// }
+	// n, err := parseRequestLine(strs[0], request)
+	// fmt.Print(n)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	return request, nil
 }
