@@ -10,25 +10,8 @@ import (
 type State int
 
 const BUFFER_SIZE = 8
-
-type Request struct {
-	RequestLine RequestLine
-	// State values:
-	// 0 - initialized
-	// 1 - done
-	State 		int
-}
-
-//TODO: To implement
-func (r *Request) parse(data []byte) (int, error) { 
-	return parseRequestLine(string(data), r)
-}
-
-type RequestLine struct {
-	HttpVersion   string
-	RequestTarget string
-	Method        string
-}
+const NOTHING_PARSED = 0
+const CRLF = "\r\n"
 
 func httpMethodParser(str string) (string, error) {
 	regex := regexp.MustCompile(`^[A-Z]+$`)
@@ -61,27 +44,29 @@ func httpRequestTargetParser(str string) (string, error) {
 }
 
 func parseRequestLine(str string, request *Request) (int, error) {
-	if !s.Contains(str, "\r\n") {
+	fmt.Printf("String to parse %s\n", str)
+	if !s.Contains(str, CRLF) {
 		return 0, nil
 	}
 
-	requestLine := s.Split(str, " ")
+	requestLine := s.Split(str, CRLF)[0]
+	parts := s.Split(requestLine, " ")
 
-	if len(requestLine) != 3 {
+	if len(parts) != 3 {
 		return 0, fmt.Errorf(`invalid request line format. Requires 3 properties. Received %d`, len(requestLine))	
 	}
 
-	method, err := httpMethodParser(requestLine[0])
+	method, err := httpMethodParser(parts[0])
 	if err != nil {
 		return 0, err
 	}
 
-	requestTarget, err := httpRequestTargetParser(requestLine[1])
+	requestTarget, err := httpRequestTargetParser(parts[1])
 	if err != nil {
 		return 0, err
 	}
 
-	version, err := httpVersionParser(requestLine[2])
+	version, err := httpVersionParser(parts[2])
 	if err != nil {
 		return 0, err
 	}
@@ -91,52 +76,58 @@ func parseRequestLine(str string, request *Request) (int, error) {
 		HttpVersion:   version,
 	}
 
-	return len(str), nil
+	return len(requestLine), nil
+}
+type Request struct {
+	RequestLine RequestLine
+	// State values:
+	// 0 - initialized
+	// 1 - done
+	State 		int
+}
+
+func (r *Request) parse(data []byte) (int, error) { 
+	n, err := parseRequestLine(string(data), r)
+	if n > 0 {
+		r.State = 1
+	}
+	return n, err
+}
+
+type RequestLine struct {
+	HttpVersion   string
+	RequestTarget string
+	Method        string
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
-    //TODO: Do not load the whole input at once
-	// input, err := io.ReadAll(reader)
-
 	request := &Request{
 		State: 0,
 	}
-	readToIndex := 0
+
+	bytesRead := 0
+	bytesParsed := 0
 	buf := make([]byte, BUFFER_SIZE)
 
-	for {
-		chunk, err := reader.Read(buf)
+	for request.State != 1 {
+		chunk, err := reader.Read(buf[bytesRead:])
 		if err != nil {
 			return nil, err
 		}
 
 		n, err := request.parse(buf)
 		if err != nil {
-			return nil, fmt.Errorf("err")
+			return nil, err
 		}
 
-		//no bytes actually parsed need to make buffer bigger
-		if n == 0 {
-			readToIndex += chunk
-			newBuf := make([]byte, len(buf) * 2)
-			copy(newBuf, buf)
-			buf = newBuf
+		if n == NOTHING_PARSED {
+			bytesRead += chunk
+			biggerBuf := make([]byte, len(buf) * 2)
+			copy(biggerBuf, buf)
+			buf = biggerBuf
+		} else {
+			bytesParsed += n
 		}
-
-		if request.State == 1 {
-			break
-		}
-		// strs := s.Split(string(buf), "\r\n")
 	}
-
-
-	// if len(strs) < 1 {
-	// 	return nil, fmt.Errorf("invalid format: Too few lines")
-	// }
-	// n, err := parseRequestLine(strs[0], request)
-	// fmt.Print(n)
-	// if err != nil {
-	// 	return nil, err
-	// }
 	return request, nil
 }
