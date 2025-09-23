@@ -44,7 +44,6 @@ func httpRequestTargetParser(str string) (string, error) {
 }
 
 func parseRequestLine(str string, request *Request) (int, error) {
-	fmt.Printf("String to parse %s\n", str)
 	if !s.Contains(str, CRLF) {
 		return 0, nil
 	}

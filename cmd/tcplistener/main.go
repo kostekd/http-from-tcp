@@ -2,65 +2,29 @@ package main
 
 import (
 	"fmt"
-	"io"
+	"httpfromtcp/internal/request"
 	"net"
-	"strings"
 )
-
-
-func listen[T string](chn <- chan T) {
-	for result := range chn {
-		fmt.Printf("%s", result)
-	}
-}
-
-func getLinesChannel(connection net.Conn) <- chan string {
-	lines := make(chan string)
-	go func() {
-		str := ""
-		defer close(lines)
-
-		for {
-			buf := make([]byte, 8)
-			chunk, err := connection.Read(buf)
-			if err != nil && err != io.EOF {
-				fmt.Printf("dev:kostekd Error: %v\n", err)
-			}
-			
-			if chunk == 0 {
-				lines <- str
-				break
-			}
-			index := strings.Index(string(buf[:8]), "\n");
-			if index == -1 {
-				str += string(buf[:8]);
-			} else {
-				str += string(buf[:index + 1])
-				lines <- str
-				str = string(buf[index + 1:])
-			}
-		}
-	}()
-	return lines
-}
 
 
 func main() {
 	l, err := net.Listen("tcp", ":42069")
+	x	
 	if err != nil {
 		fmt.Print("Failed to start TCP listener on :42069\n")
 	}
 	defer l.Close();
-	
 	for {
 		connection, err := l.Accept()
 		if err != nil {
 			fmt.Print("Error: failed to accept connection\n")
 		}
-		fmt.Print("connection accepted\n")
-		channel := getLinesChannel(connection)
-		listen(channel)
+		request, err := request.RequestFromReader(connection)
+		if err != nil {
+			fmt.Print("Error: request parsing failed\n")
+		}
+
+		fmt.Printf("Request line:\n- Method: %s\n- Target: %s\n- Version: %s\n", request.RequestLine.Method, request.RequestLine.RequestTarget, request.RequestLine.HttpVersion)
 		connection.Close()
-		fmt.Print("connection closed\n")
 	}
 }
