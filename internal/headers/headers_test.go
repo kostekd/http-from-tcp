@@ -16,7 +16,7 @@ func TestHeadersParse(t *testing.T) {
 	n, done, err := h.Parse(data)
 	require.NoError(t, err)
 	require.NotNil(t, h)
-	assert.Equal(t, "localhost:42069", h["Host"])
+	assert.Equal(t, "localhost:42069", h["host"])
 	assert.Equal(t, 23, n)
 	assert.False(t, done)
 
@@ -25,6 +25,7 @@ func TestHeadersParse(t *testing.T) {
 	data = []byte("       Host: localhost:42069       \r\n\r\n")
 	n, done, err = h.Parse(data)
 	require.NoError(t, err)
+	assert.Equal(t, "localhost:42069", h["host"])
 	assert.Equal(t, 37, n)
 	assert.False(t, done)
 
@@ -51,9 +52,17 @@ func TestHeadersParse(t *testing.T) {
 	data = []byte("User-Agent: curl/7.81.0\r\n\r\n")
 	n, done, err = h.Parse(data)
 	assert.Equal(t, "RandomValue", h["Random-Header"])
-	assert.Equal(t, "curl/7.81.0", h["User-Agent"])
+	assert.Equal(t, "curl/7.81.0", h["user-agent"])
 	require.NoError(t, err)
 	assert.Equal(t, 25, n)
+	assert.False(t, done)
+
+	// Test: Invalid header with non-ASCII character in key
+	h = Headers{}
+	data = []byte("H©st: localhost:42069\r\n\r\n")
+	n, done, err = h.Parse(data)
+	require.Error(t, err)
+	assert.Equal(t, 0, n)
 	assert.False(t, done)
 
 }

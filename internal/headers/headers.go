@@ -7,7 +7,7 @@ import (
 )
 
 func validateHeaderSyntax(header string) (string, error){
-	regex := regexp.MustCompile(`^[A-Za-z0-9-]+:\s*.+$`)
+	regex := regexp.MustCompile(`^[A-Za-z0-9!#$%&'*+\-.^_` + "`" + `|~]+:\s*.+$`)
 	
 	if(!regex.MatchString(header)) { 
 		return "", fmt.Errorf("invalid http method")
@@ -16,10 +16,12 @@ func validateHeaderSyntax(header string) (string, error){
 	return header, nil
 }
 
+
 type Headers map[string]string
 
 const CRLF = "\r\n"
 
+//TODO: This is too simple and parse only one header at a time and it should multiple I think.
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	str := string(data)
 	if !s.Contains(str, CRLF) {
@@ -42,7 +44,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 	key := keyValue[0]
 	value := s.Join(keyValue[1:], ":")[1:]
-	h[key] = value
+	h[s.ToLower(key)] = value
 
 	bytesParsed := len(untrimedHeader) + len(CRLF)
 
