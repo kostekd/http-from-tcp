@@ -9,7 +9,6 @@ import (
 
 func main() {
 	l, err := net.Listen("tcp", ":42069")
-	x	
 	if err != nil {
 		fmt.Print("Failed to start TCP listener on :42069\n")
 	}
