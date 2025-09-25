@@ -21,7 +21,7 @@ type Headers map[string]string
 const CRLF = "\r\n"
 
 //TODO: For now I will leave it with a default done as false all the time but tbh I dont understand why.
-func (h Headers) Parse(data []byte) (n int, done bool, err error) {
+func (h Headers) Parse(data []byte) (n int, done bool, err error) {	
 	str := string(data)
 	if !s.Contains(str, CRLF) {	
 		return 0, false, nil
@@ -43,10 +43,15 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 	 	keyValue := s.Split(trimedHeader, ":")
 
-		key := keyValue[0]
+		key := s.ToLower(keyValue[0])
 		value := s.Join(keyValue[1:], ":")[1:]
-		h[s.ToLower(key)] = value
-
+		v, ok := h[key]
+		if ok {
+			h[key] = s.Join([]string{v, value}, ",")
+		} else {
+			h[key] = value
+	
+		}
 		bytesParsed += len(header) + len(CRLF)
 	}
 

@@ -65,15 +65,34 @@ func TestHeadersParse(t *testing.T) {
 	assert.Equal(t, 0, n)
 	assert.False(t, done)
 
-	//Test: Add multiple headers
+	//Test: Valid with multiple headers
 	h = Headers{}
-	data = []byte("Host: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n")
+	data = []byte("Host: localhost:42069\r\n             User-Agent: curl/7.81.0            \r\nAccept: */*\r\n\r\n")
 	n, done, err = h.Parse(data)
 	require.NoError(t, err)
 	assert.Equal(t, "localhost:42069", h["host"])
 	assert.Equal(t, "curl/7.81.0", h["user-agent"])
 	assert.Equal(t, "*/*", h["accept"])
-	assert.Equal(t, 61, n)
+	assert.Equal(t, 86, n)
+	assert.False(t, done)
+
+	//Test: Invalid with multiple headers
+	h = Headers{}
+	data = []byte("Host: localhost:42069\r\n       User-Agent : curl/7.81.0\r\nAccept: */*\r\n\r\n")
+	n, done, err = h.Parse(data)
+	require.Error(t, err)
+	assert.Equal(t, "localhost:42069", h["host"])
+	assert.Equal(t, 23, n)
+	assert.False(t, done)
+
+	//Test: Header set multiple times
+	h = Headers{}
+	data = []byte("Set-Person: kostek-d\r\nSet-Person: martyna-p\r\nSet-Person: kupa-k\r\n\r\n")
+	n, done, err = h.Parse(data)
+	require.NoError(t, err)
+	// Only the last value should be present for "set-person"
+	assert.Equal(t, "kostek-d,martyna-p,kupa-k", h["set-person"])
+	assert.Equal(t, 65, n)
 	assert.False(t, done)
 
 }
