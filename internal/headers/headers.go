@@ -16,37 +16,39 @@ func validateHeaderSyntax(header string) (string, error){
 	return header, nil
 }
 
-
 type Headers map[string]string
 
 const CRLF = "\r\n"
 
-//TODO: This is too simple and parse only one header at a time and it should multiple I think.
+//TODO: For now I will leave it with a default done as false all the time but tbh I dont understand why.
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	str := string(data)
-	if !s.Contains(str, CRLF) {
+	if !s.Contains(str, CRLF) {	
 		return 0, false, nil
 	}
-	if s.Index(str, CRLF) == 0 {
-		return 0, false, nil
+	headers := s.Split(str, CRLF)
+	bytesParsed := 0
+
+	for _, header := range headers {
+		// it means that the header we are trying to parse is the empty line
+		if header == "" {
+			return bytesParsed, false, nil
+		}
+		trimedHeader := s.TrimSpace(header)
+		 _, err = validateHeaderSyntax(trimedHeader)
+
+		if err != nil {
+			return bytesParsed, false, fmt.Errorf("error: invalid syntax")
+		}
+
+	 	keyValue := s.Split(trimedHeader, ":")
+
+		key := keyValue[0]
+		value := s.Join(keyValue[1:], ":")[1:]
+		h[s.ToLower(key)] = value
+
+		bytesParsed += len(header) + len(CRLF)
 	}
-
-	untrimedHeader := s.Split(str, CRLF)[0]
-	header := s.TrimSpace(untrimedHeader)
-
-	_, err = validateHeaderSyntax(header)
-
-	if err != nil {
-		return 0, false, fmt.Errorf("invalid header syntax")
-	}
-
-	keyValue := s.Split(header, ":")
-
-	key := keyValue[0]
-	value := s.Join(keyValue[1:], ":")[1:]
-	h[s.ToLower(key)] = value
-
-	bytesParsed := len(untrimedHeader) + len(CRLF)
 
 	return bytesParsed, false, nil
 }
