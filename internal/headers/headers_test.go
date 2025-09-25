@@ -57,12 +57,23 @@ func TestHeadersParse(t *testing.T) {
 	assert.Equal(t, 25, n)
 	assert.False(t, done)
 
-	// Test: Invalid header with non-ASCII character in key
+	//Test: Invalid header with non-ASCII character in key
 	h = Headers{}
 	data = []byte("H©st: localhost:42069\r\n\r\n")
 	n, done, err = h.Parse(data)
 	require.Error(t, err)
 	assert.Equal(t, 0, n)
+	assert.False(t, done)
+
+	//Test: Add multiple headers
+	h = Headers{}
+	data = []byte("Host: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n")
+	n, done, err = h.Parse(data)
+	require.NoError(t, err)
+	assert.Equal(t, "localhost:42069", h["host"])
+	assert.Equal(t, "curl/7.81.0", h["user-agent"])
+	assert.Equal(t, "*/*", h["accept"])
+	assert.Equal(t, 61, n)
 	assert.False(t, done)
 
 }
