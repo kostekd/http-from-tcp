@@ -45,9 +45,9 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 		key := s.ToLower(keyValue[0])
 		value := s.Join(keyValue[1:], ":")[1:]
-		v, ok := h[key]
+		curr, ok := h[key]
 		if ok {
-			h[key] = s.Join([]string{v, value}, ",")
+			h[key] = s.Join([]string{curr, value}, ",")
 		} else {
 			h[key] = value
 	
