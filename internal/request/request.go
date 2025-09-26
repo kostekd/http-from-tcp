@@ -126,7 +126,6 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	for request.State != 2 {
 		chunk, err := reader.Read(buf[readToStart:])
 		readToStart += chunk
-		fmt.Printf("BEFORE OPERATIONS -------- buf stats -- len: %d, cap: %d, readToStart: %d, bytesParsed: %d, as string: %q, as bytes: %v\n", len(buf), cap(buf), readToStart, bytesParsed, string(buf[:readToStart]), buf)
 		
 		if err != nil {
 			return nil, err
@@ -148,7 +147,6 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 			buf = growBuffer(buf)
 		}
 
-		fmt.Printf("AFTER OPERATIONS -------- buf stats -- len: %d, cap: %d, readToStart: %d, bytesParsed: %d, as string: %q, as bytes: %v\n", len(buf), cap(buf), readToStart, bytesParsed, string(buf[:readToStart]), buf)
 	}
 	return request, nil
 }
