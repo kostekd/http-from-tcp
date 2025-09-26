@@ -3,6 +3,7 @@ package request
 import (
 	"fmt"
 	"httpfromtcp/internal/headers"
+	"httpfromtcp/internal/utils"
 	"io"
 	"regexp"
 	s "strings"
@@ -139,27 +140,14 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		if !(n == NOTHING_PARSED) {
 			bytesParsed += n
 			readToStart -= n
-			buf = shiftBuffer(buf, n)
+			buf = utils.ShiftBuffer(buf, n)
 		}
 		
 		//grow buffer
 		if(readToStart >= len(buf)) {
-			buf = growBuffer(buf)
+			buf = utils.GrowBuffer(buf)
 		}
 
 	}
 	return request, nil
-}
-
-func growBuffer(buf []byte) []byte {
-	biggerBuf := make([]byte, len(buf) * 2)
-	copy(biggerBuf, buf)
-	buf = biggerBuf
-	return buf
-}
-func shiftBuffer(buf []byte, offset int) []byte {
-	shiftBuf := make([]byte, len(buf))
-	copy(shiftBuf, buf[offset:])
-	buf = shiftBuf
-	return buf
 }
