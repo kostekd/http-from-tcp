@@ -2,6 +2,7 @@ package request
 
 import (
 	"fmt"
+	"httpfromtcp/internal/headers"
 	"io"
 	"regexp"
 	s "strings"
@@ -75,22 +76,35 @@ func parseRequestLine(str string, request *Request) (int, error) {
 		HttpVersion:   version,
 	}
 
-	return len(requestLine), nil
+	return len(requestLine) + len(CRLF), nil
 }
 type Request struct {
 	RequestLine RequestLine
+	Headers headers.Headers
 	// State values:
 	// 0 - initialized
-	// 1 - done
+	// 1 - request line parsed
+	// 2 - done
 	State 		int
 }
 
 func (r *Request) parse(data []byte) (int, error) { 
-	n, err := parseRequestLine(string(data), r)
-	if n > 0 {
-		r.State = 1
+	switch r.State {
+	case 0:
+		n, err := parseRequestLine(string(data), r)
+		if n > 0 {
+			r.State = 1
+		}
+		return n, err
+	case 1: 
+		n, done, err := r.Headers.Parse(data)
+		if done {
+			r.State = 2
+		}
+		return n, err
 	}
-	return n, err
+
+	return 0, nil
 }
 
 type RequestLine struct {
@@ -102,31 +116,52 @@ type RequestLine struct {
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	request := &Request{
 		State: 0,
+		Headers: headers.Headers{},
 	}
 
-	bytesRead := 0
+	readToStart := 0
 	bytesParsed := 0
 	buf := make([]byte, BUFFER_SIZE)
-
-	for request.State != 1 {
-		chunk, err := reader.Read(buf[bytesRead:])
+	
+	for request.State != 2 {
+		chunk, err := reader.Read(buf[readToStart:])
+		readToStart += chunk
+		fmt.Printf("BEFORE OPERATIONS -------- buf stats -- len: %d, cap: %d, readToStart: %d, bytesParsed: %d, as string: %q, as bytes: %v\n", len(buf), cap(buf), readToStart, bytesParsed, string(buf[:readToStart]), buf)
+		
 		if err != nil {
 			return nil, err
 		}
-
+		
 		n, err := request.parse(buf)
 		if err != nil {
 			return nil, err
 		}
-
-		if n == NOTHING_PARSED {
-			bytesRead += chunk
-			biggerBuf := make([]byte, len(buf) * 2)
-			copy(biggerBuf, buf)
-			buf = biggerBuf
-		} else {
+		
+		if !(n == NOTHING_PARSED) {
 			bytesParsed += n
+			readToStart -= n
+			buf = shiftBuffer(buf, n)
 		}
+		
+		//grow buffer
+		if(readToStart >= len(buf)) {
+			buf = growBuffer(buf)
+		}
+
+		fmt.Printf("AFTER OPERATIONS -------- buf stats -- len: %d, cap: %d, readToStart: %d, bytesParsed: %d, as string: %q, as bytes: %v\n", len(buf), cap(buf), readToStart, bytesParsed, string(buf[:readToStart]), buf)
 	}
 	return request, nil
+}
+
+func growBuffer(buf []byte) []byte {
+	biggerBuf := make([]byte, len(buf) * 2)
+	copy(biggerBuf, buf)
+	buf = biggerBuf
+	return buf
+}
+func shiftBuffer(buf []byte, offset int) []byte {
+	shiftBuf := make([]byte, len(buf))
+	copy(shiftBuf, buf[offset:])
+	buf = shiftBuf
+	return buf
 }

@@ -32,7 +32,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	for _, header := range headers {
 		// it means that the header we are trying to parse is the empty line
 		if header == "" {
-			return bytesParsed, false, nil
+			return bytesParsed, true, nil
 		}
 		trimedHeader := s.TrimSpace(header)
 		 _, err = validateHeaderSyntax(trimedHeader)
