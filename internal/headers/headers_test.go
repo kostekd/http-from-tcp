@@ -18,7 +18,7 @@ func TestHeadersParse(t *testing.T) {
 	require.NotNil(t, h)
 	assert.Equal(t, "localhost:42069", h["host"])
 	assert.Equal(t, 23, n)
-	assert.False(t, done)
+	assert.True(t, done)
 
 	// Test: Valid spacing header
 	h = Headers{}
@@ -27,7 +27,7 @@ func TestHeadersParse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "localhost:42069", h["host"])
 	assert.Equal(t, 37, n)
-	assert.False(t, done)
+	assert.True(t, done)
 
 	// Test: Invalid spacing header
 	h = Headers{}
@@ -43,7 +43,7 @@ func TestHeadersParse(t *testing.T) {
 	n, done, err = h.Parse(data)
 	require.NoError(t, err)
 	assert.Equal(t, 0, n)
-	assert.False(t, done)
+	assert.True(t, done)
 
 	//Test: Already existing header
 	h = Headers{}
@@ -55,7 +55,7 @@ func TestHeadersParse(t *testing.T) {
 	assert.Equal(t, "curl/7.81.0", h["user-agent"])
 	require.NoError(t, err)
 	assert.Equal(t, 25, n)
-	assert.False(t, done)
+	assert.True(t, done)
 
 	//Test: Invalid header with non-ASCII character in key
 	h = Headers{}
@@ -74,7 +74,7 @@ func TestHeadersParse(t *testing.T) {
 	assert.Equal(t, "curl/7.81.0", h["user-agent"])
 	assert.Equal(t, "*/*", h["accept"])
 	assert.Equal(t, 86, n)
-	assert.False(t, done)
+	assert.True(t, done)
 
 	//Test: Invalid with multiple headers
 	h = Headers{}
@@ -93,6 +93,14 @@ func TestHeadersParse(t *testing.T) {
 	// Only the last value should be present for "set-person"
 	assert.Equal(t, "kostek-d,martyna-p,kupa-k", h["set-person"])
 	assert.Equal(t, 65, n)
+	assert.True(t, done)
+
+	//Test: Incomplete header
+	h = Headers{}
+	data = []byte("Host: localhost:42069\r\n     U\r\n\r\n")
+	n, done, err = h.Parse(data)
+	require.Error(t, err)
+	assert.Equal(t, 23, n)
 	assert.False(t, done)
 
 }
