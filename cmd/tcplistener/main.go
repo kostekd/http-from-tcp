@@ -27,6 +27,7 @@ func main() {
 		for k, v := range request.Headers {
 			fmt.Printf("- %s: %s\n", k, v)
 		}
+		fmt.Printf("Body:\n%s\n", string(request.Body))
 		connection.Close()
 	}
 }

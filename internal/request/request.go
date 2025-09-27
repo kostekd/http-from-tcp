@@ -104,16 +104,22 @@ func (r *Request) parse(data *buffer.Buf) (int, error) {
 	case 1: 
 		n, done, err := r.Headers.Parse(data.B)
 		if done {
-			r.State = 2
+			contentLength := r.Headers.GetContentLength()
+			//skip last step because there is no body to be parsed
+			if contentLength == 0 {
+				r.State = 3
+			} else {
+				r.State = 2
+			}
+			return n, err
 		}
 		return n, err
 	case 2:
 		contentLength := r.Headers.GetContentLength()
-		//no body to parse just skip
-		if contentLength == 0 {
+		r.Body = append(r.Body, data.B[:data.R]...)
+		if len(r.Body) == contentLength {
 			r.State = 3
 		}
-		r.Body = append(r.Body, data.B[:data.R]...)
 		return data.R, nil
 
 	}
@@ -135,16 +141,12 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	buf := buffer.New(BUFFER_SIZE)
 	
 	for request.State != 3 {
-		chunk, errReader := reader.Read(buf.B[buf.R:])
+		chunk, err := reader.Read(buf.B[buf.R:])
 		buf.R += chunk
-		if errReader != nil && errReader != io.EOF {
-			return nil, errReader
+		if err != nil && err != io.EOF {
+			return nil, err
 		}
 		n, err := request.parse(buf)
-
-		if errReader == io.EOF && request.Headers.GetContentLength() > len(request.Body){
-			return nil, errReader
-		}
 
 		if err != nil {
 			return nil, err
@@ -159,16 +161,6 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		if(buf.R >= len(buf.B)) {
 			buf.Grow()
 		}
-
-		if errReader == io.EOF {
-			if len(request.Body) == request.Headers.GetContentLength() {
-				request.State = 3
-			}else {
-				return nil, fmt.Errorf("error: body size does not match content-length header")
-			}
-
-		}
-
 	}
 	return request, nil
 }
