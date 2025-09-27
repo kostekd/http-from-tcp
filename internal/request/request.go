@@ -82,6 +82,7 @@ func parseRequestLine(str string, request *Request) (int, error) {
 type Request struct {
 	RequestLine RequestLine
 	Headers headers.Headers
+	Body []byte
 	// State values:
 	// 0 - initialized
 	// 1 - request line parsed
