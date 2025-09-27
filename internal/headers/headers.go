@@ -41,7 +41,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	for _, header := range headers {
 		// it means that the header we are trying to parse is the empty line
 		if header == EMPTY_HEADER {
-			return bytesParsed, true, nil
+			return bytesParsed + len(CRLF), true, nil
 		}
 		trimedHeader := s.TrimSpace(header)
 		 _, err = validateHeaderSyntax(trimedHeader)
@@ -67,6 +67,10 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	return bytesParsed, false, nil
 }
 
-func (h Headers) Get(key string) string {
-	return h[s.ToLower(key)]
+func (h Headers) Get(key string) (string, error) {
+	val, ok := h[s.ToLower(key)]
+	if !ok {
+		return "", fmt.Errorf("value not present")
+	}
+	return val, nil
 }

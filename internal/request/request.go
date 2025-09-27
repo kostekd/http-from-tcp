@@ -2,10 +2,11 @@ package request
 
 import (
 	"fmt"
+	"httpfromtcp/internal/buffer"
 	"httpfromtcp/internal/headers"
-	"httpfromtcp/internal/utils"
 	"io"
 	"regexp"
+	"strconv"
 	s "strings"
 )
 
@@ -14,6 +15,7 @@ type State int
 const BUFFER_SIZE = 8
 const NOTHING_PARSED = 0
 const CRLF = "\r\n"
+const CONTENT_LENGTH = "Content-Length"
 
 func httpMethodParser(str string) (string, error) {
 	regex := regexp.MustCompile(`^[A-Z]+$`)
@@ -45,7 +47,8 @@ func httpRequestTargetParser(str string) (string, error) {
 	return str, nil;
 }
 
-func parseRequestLine(str string, request *Request) (int, error) {
+func parseRequestLine(data []byte, request *Request) (int, error) {
+	str := string(data)
 	if !s.Contains(str, CRLF) {
 		return 0, nil
 	}
@@ -79,6 +82,7 @@ func parseRequestLine(str string, request *Request) (int, error) {
 
 	return len(requestLine) + len(CRLF), nil
 }
+
 type Request struct {
 	RequestLine RequestLine
 	Headers headers.Headers
@@ -86,29 +90,47 @@ type Request struct {
 	// State values:
 	// 0 - initialized
 	// 1 - request line parsed
-	// 2 - done
+	// 2 - headers parsed
+	// 3 - done (body parsed)
 	State 		int
 }
 
-func (r *Request) parse(data []byte) (int, error) { 
+func (r *Request) parse(data *buffer.Buf) (int, error) { 
 	switch r.State {
 	case 0:
-		n, err := parseRequestLine(string(data), r)
+		n, err := parseRequestLine(data.B, r)
 		if n > 0 {
 			r.State = 1
 		}
 		return n, err
 	case 1: 
-		n, done, err := r.Headers.Parse(data)
+		n, done, err := r.Headers.Parse(data.B)
 		if done {
 			r.State = 2
 		}
 		return n, err
+	case 2:
+		contentLength, err := r.Headers.Get(CONTENT_LENGTH)
+		
+		//no body present just skip
+		if err != nil {
+			r.State = 3
+		}
+		contentLengthNum, err := strconv.Atoi(contentLength)
+		if err != nil {
+			return 0, fmt.Errorf("error: content-length is not a number")
+		}
+		if (len(r.Body) + data.R) > contentLengthNum {
+			return len(r.Body), fmt.Errorf("error: data exceeds content-length provided in a request")
+		} else {
+			r.Body = append(r.Body, data.B[:data.R]...)
+		}
+		return data.R, nil
+
 	}
 
-	return 0, nil
+	return -1, nil
 }
-
 type RequestLine struct {
 	HttpVersion   string
 	RequestTarget string
@@ -121,16 +143,17 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		Headers: headers.Headers{},
 	}
 
-	readToStart := 0
-	bytesParsed := 0
-	buf := make([]byte, BUFFER_SIZE)
+	buf := buffer.New(BUFFER_SIZE)
 	
-	for request.State != 2 {
-		chunk, err := reader.Read(buf[readToStart:])
-		readToStart += chunk
-		
-		if err != nil {
+	for request.State != 3 {
+		chunk, err := reader.Read(buf.B[buf.R:])
+		buf.R += chunk
+		if err != nil && err != io.EOF {
 			return nil, err
+		}
+
+		if err == io.EOF {
+			return request, nil
 		}
 		
 		n, err := request.parse(buf)
@@ -139,14 +162,13 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		}
 		
 		if !(n == NOTHING_PARSED) {
-			bytesParsed += n
-			readToStart -= n
-			buf = utils.ShiftBuffer(buf, n)
+			buf.R -= n
+			buf.Free(n)
 		}
 		
 		//grow buffer
-		if(readToStart >= len(buf)) {
-			buf = utils.GrowBuffer(buf)
+		if(buf.R >= len(buf.B)) {
+			buf.Grow()
 		}
 
 	}

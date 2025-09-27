@@ -6,7 +6,6 @@ import (
 	"net"
 )
 
-
 func main() {
 	l, err := net.Listen("tcp", ":42069")
 	if err != nil {

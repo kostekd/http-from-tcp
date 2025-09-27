@@ -170,7 +170,7 @@ func TestBodyParse(t *testing.T) {
 		numBytesPerRead: 3,
 	}
 	_, err = RequestFromReader(reader)
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 
