@@ -3,10 +3,12 @@ package headers
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	s "strings"
 )
 
 var EMPTY_HEADER = ""
+const CONTENT_LENGTH = "Content-Length"
 
 func validateHeaderSyntax(header string) (string, error){
 	regex := regexp.MustCompile(`^[A-Za-z0-9!#$%&'*+\-.^_` + "`" + `|~]+:\s*.+$`)
@@ -73,4 +75,17 @@ func (h Headers) Get(key string) (string, error) {
 		return "", fmt.Errorf("value not present")
 	}
 	return val, nil
+}
+
+func (h Headers) GetContentLength() int {
+	val, err := h.Get(CONTENT_LENGTH)
+	if err != nil {
+		return 0
+	}
+	num, err := strconv.Atoi(val)
+	if err != nil {
+		panic(err)
+	}
+
+	return num
 }

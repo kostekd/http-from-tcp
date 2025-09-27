@@ -6,7 +6,6 @@ import (
 	"httpfromtcp/internal/headers"
 	"io"
 	"regexp"
-	"strconv"
 	s "strings"
 )
 
@@ -15,7 +14,6 @@ type State int
 const BUFFER_SIZE = 8
 const NOTHING_PARSED = 0
 const CRLF = "\r\n"
-const CONTENT_LENGTH = "Content-Length"
 
 func httpMethodParser(str string) (string, error) {
 	regex := regexp.MustCompile(`^[A-Z]+$`)
@@ -110,21 +108,12 @@ func (r *Request) parse(data *buffer.Buf) (int, error) {
 		}
 		return n, err
 	case 2:
-		contentLength, err := r.Headers.Get(CONTENT_LENGTH)
-		
-		//no body present just skip
-		if err != nil {
+		contentLength := r.Headers.GetContentLength()
+		//no body to parse just skip
+		if contentLength == 0 {
 			r.State = 3
 		}
-		contentLengthNum, err := strconv.Atoi(contentLength)
-		if err != nil {
-			return 0, fmt.Errorf("error: content-length is not a number")
-		}
-		if (len(r.Body) + data.R) > contentLengthNum {
-			return len(r.Body), fmt.Errorf("error: data exceeds content-length provided in a request")
-		} else {
-			r.Body = append(r.Body, data.B[:data.R]...)
-		}
+		r.Body = append(r.Body, data.B[:data.R]...)
 		return data.R, nil
 
 	}
@@ -146,17 +135,17 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	buf := buffer.New(BUFFER_SIZE)
 	
 	for request.State != 3 {
-		chunk, err := reader.Read(buf.B[buf.R:])
+		chunk, errReader := reader.Read(buf.B[buf.R:])
 		buf.R += chunk
-		if err != nil && err != io.EOF {
-			return nil, err
+		if errReader != nil && errReader != io.EOF {
+			return nil, errReader
+		}
+		n, err := request.parse(buf)
+
+		if errReader == io.EOF && request.Headers.GetContentLength() > len(request.Body){
+			return nil, errReader
 		}
 
-		if err == io.EOF {
-			return request, nil
-		}
-		
-		n, err := request.parse(buf)
 		if err != nil {
 			return nil, err
 		}
@@ -169,6 +158,15 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		//grow buffer
 		if(buf.R >= len(buf.B)) {
 			buf.Grow()
+		}
+
+		if errReader == io.EOF {
+			if len(request.Body) == request.Headers.GetContentLength() {
+				request.State = 3
+			}else {
+				return nil, fmt.Errorf("error: body size does not match content-length header")
+			}
+
 		}
 
 	}
