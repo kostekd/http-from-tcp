@@ -2,8 +2,8 @@ package server
 
 import (
 	"fmt"
-	"net"
 	"httpfromtcp/internal/request"
+	"net"
 )
 type Server struct {
 	listener net.Listener
@@ -19,27 +19,37 @@ func (s *Server) listen() {
 		if err != nil {
 			fmt.Print("Error: failed to accept connection\n")
 		}
-		request, err := request.RequestFromReader(connection)
-		if err != nil {
-			fmt.Print("Error: request parsing failed\n")
-		}
-
-		fmt.Printf("Request line:\n- Method: %s\n- Target: %s\n- Version: %s\n", request.RequestLine.Method, request.RequestLine.RequestTarget, request.RequestLine.HttpVersion)
-		fmt.Println("Headers:")
-		for k, v := range request.Headers {
-			fmt.Printf("- %s: %s\n", k, v)
-		}
-		fmt.Printf("Body:\n%s\n", string(request.Body))
-		connection.Close()
+		go s.handle(connection)
 	}
+}
+
+func (s *Server) handle(conn net.Conn) {
+	request, err := request.RequestFromReader(conn)
+	if err != nil {
+		fmt.Print("Error: request parsing failed\n")
+	}
+
+	fmt.Printf("Request line:\n- Method: %s\n- Target: %s\n- Version: %s\n", request.RequestLine.Method, request.RequestLine.RequestTarget, request.RequestLine.HttpVersion)
+	fmt.Println("Headers:")
+	for k, v := range request.Headers {
+		fmt.Printf("- %s: %s\n", k, v)
+	}
+	fmt.Printf("Body:\n%s\n", string(request.Body))
+	response := []byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello World!\r\n")
+	conn.Write(response)
+
+	conn.Close()
 }
 
 func Serve(port int) (*Server, error) {
 	l, err := net.Listen("tcp", ":" + fmt.Sprintf("%d", port))
 	if err != nil {
-		fmt.Printf("Failed to start TCP listener on :%d\n", port)
+		return nil, fmt.Errorf("failed to start TCP listener on :%d", port)
 	}
-	return &Server{
+	server := Server{
 		listener: l,
-	}, nil
+	}
+	go server.listen()
+
+	return &server, nil
 }
