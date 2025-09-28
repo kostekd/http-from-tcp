@@ -36,7 +36,13 @@ func (s *Server) handle(conn net.Conn) {
 	}
 	fmt.Printf("Body:\n%s\n", string(request.Body))
 	
-	response := []byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello World!\r\n")
+	response := []byte(
+		"HTTP/1.1 200 OK\r\n" +
+		"Content-Type: text/plain\r\n" +
+		// "Content-Length: 13\r\n" +
+		"\r\n" +
+		"Hello World!\r\n",
+	)
 	_, _ = conn.Write(response)
 
 	conn.Close()
