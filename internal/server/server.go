@@ -35,8 +35,9 @@ func (s *Server) handle(conn net.Conn) {
 		fmt.Printf("- %s: %s\n", k, v)
 	}
 	fmt.Printf("Body:\n%s\n", string(request.Body))
+	
 	response := []byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello World!\r\n")
-	conn.Write(response)
+	_, _ = conn.Write(response)
 
 	conn.Close()
 }
