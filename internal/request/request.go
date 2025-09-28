@@ -121,7 +121,6 @@ func (r *Request) parse(data *buffer.Buf) (int, error) {
 			r.State = 3
 		}
 		return data.R, nil
-
 	}
 
 	return -1, nil
@@ -141,12 +140,16 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	buf := buffer.New(BUFFER_SIZE)
 	
 	for request.State != 3 {
-		chunk, err := reader.Read(buf.B[buf.R:])
+		chunk, errReader := reader.Read(buf.B[buf.R:])
 		buf.R += chunk
-		if err != nil && err != io.EOF {
-			return nil, err
+		if errReader != nil && errReader != io.EOF {
+			return nil, errReader
 		}
 		n, err := request.parse(buf)
+
+		if errReader == io.EOF && request.Headers.GetContentLength() > len(request.Body) {
+			return nil, fmt.Errorf("error: body too short")
+		}
 
 		if err != nil {
 			return nil, err
@@ -157,7 +160,6 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 			buf.Free(n)
 		}
 		
-		//grow buffer
 		if(buf.R >= len(buf.B)) {
 			buf.Grow()
 		}

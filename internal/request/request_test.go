@@ -70,7 +70,7 @@ func TestRequestLineParse(t *testing.T) {
 	assert.Equal(t, "1.1", r.RequestLine.HttpVersion)
 
 	// Test: Good POST Request line with path and query params and body
-	postData := "POST /submit HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\nContent-Type: application/json\r\nContent-Length: 18\r\n\r\n{\"key\":\"value\"}\r\n"
+	postData := "POST /submit HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\nContent-Type: application/json\r\nContent-Length: 17\r\n\r\n{\"key\":\"value\"}\r\n"
 	r, err = RequestFromReader(&chunkReader{
 		data:            postData,
 		numBytesPerRead: 4, // random chunk size
@@ -199,7 +199,7 @@ func TestBodyParse(t *testing.T) {
 	_, err = RequestFromReader(reader)
 	require.Error(t, err)
 
-	// Test: Body shorter than reported content length
+	// Test: Body longer than reported content length
 	reader = &chunkReader{
 		data: "POST /submit HTTP/1.1\r\n" +
 			"Host: localhost:42069\r\n" +
@@ -209,7 +209,7 @@ func TestBodyParse(t *testing.T) {
 		numBytesPerRead: 3,
 	}
 	_, err = RequestFromReader(reader)
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 

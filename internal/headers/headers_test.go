@@ -83,7 +83,7 @@ func TestHeadersParse(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, "localhost:42069", h["host"])
 	assert.Equal(t, 23, n)
-	assert.False(t, done)
+		assert.False(t, done)
 
 	//Test: Header set multiple times
 	h = Headers{}
