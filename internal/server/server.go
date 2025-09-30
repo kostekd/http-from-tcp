@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"httpfromtcp/internal/request"
+	"httpfromtcp/internal/response"
 	"net"
 )
 type Server struct {
@@ -36,14 +37,12 @@ func (s *Server) handle(conn net.Conn) {
 	}
 	fmt.Printf("Body:\n%s\n", string(request.Body))
 	
-	response := []byte(
-		"HTTP/1.1 200 OK\r\n" +
-		"Content-Type: text/plain\r\n" +
-		// "Content-Length: 13\r\n" +
-		"\r\n" +
-		"Hello World!\r\n",
-	)
-	_, _ = conn.Write(response)
+
+	//for now no body so content-length is 0
+	headers := response.GetDefaultHeaders(0)
+
+	response.WriteStatusLine(conn, response.HttpStatusOK)
+	response.WriteHeaders(conn, headers)
 
 	conn.Close()
 }
