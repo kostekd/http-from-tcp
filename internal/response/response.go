@@ -63,7 +63,7 @@ func GetDefaultHeaders(contentLen int) h.Headers {
 	m := make(h.Headers)
 
 	m["content-length"] = fmt.Sprintf("%d", contentLen)
-	m["keep-alive"] = "close"
+	m["connection"] = "close"
 	m["content-type"] = "text/plain"
 
 	return m
