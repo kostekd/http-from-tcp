@@ -51,12 +51,20 @@ func WriteHeaders(w io.Writer, headers h.Headers) error {
 	return nil
 }
 
+func WriteBody(w io.Writer, data []byte) error {
+	_, err := w.Write(data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func GetDefaultHeaders(contentLen int) h.Headers {
 	m := make(h.Headers)
 
 	m["content-length"] = fmt.Sprintf("%d", contentLen)
 	m["keep-alive"] = "close"
-	m["content=type"] = "text/plain"
+	m["content-type"] = "text/plain"
 
 	return m
 }
