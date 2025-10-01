@@ -1,108 +1,252 @@
-# HTTP/1.1 Protocol Implementation in Go
+# HTTP/1.1 Server Implementation from TCP in Go
 
-A learning project that recreates the HTTP/1.1 protocol from scratch using Go, focusing on understanding low-level network programming and protocol implementation.
+A complete HTTP/1.1 server implementation built from scratch using only Go's TCP layer. This project demonstrates low-level network programming by recreating the HTTP protocol without using any high-level HTTP libraries.
 
-## Project Overview
+## What This Project Does
 
-This project implements core HTTP/1.1 functionality by building up from the TCP layer, providing hands-on experience with:
-- TCP socket programming
-- HTTP request parsing
-- Protocol state management
-- Network I/O handling
+This is a fully functional HTTP/1.1 server that:
+- **Listens for TCP connections** on port 42069
+- **Parses raw HTTP requests** byte-by-byte from the TCP stream
+- **Routes requests** to appropriate handlers
+- **Generates proper HTTP/1.1 responses** with status lines, headers, and body
+- **Handles errors gracefully** with appropriate HTTP status codes
 
-## Architecture
+All of this is built directly on top of TCP sockets without using Go's `net/http` package.
+
+## Quick Start with Docker
+
+The easiest way to run this project is using Docker:
+
+```bash
+# Build and start the server
+docker-compose up --build
+
+# Or run in detached mode (background)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the server
+docker-compose down
+```
+
+Once running, test the server:
+
+```bash
+# Default endpoint - returns 200 OK
+curl http://localhost:42069/
+
+# Error endpoint - returns 400 Bad Request
+curl http://localhost:42069/yourproblem
+
+# Another error endpoint - returns 500 Internal Server Error
+curl http://localhost:42069/myproblem
+```
+
+## Running Without Docker
+
+If you prefer to run directly with Go:
+
+```bash
+# Run the HTTP server
+go run cmd/httpserver/main.go
+
+# Or run the basic TCP listener (development version)
+go run cmd/tcplistener/main.go
+```
+
+## Architecture Deep Dive
+
+### How It Works
+
+When a client connects to the server, here's what happens:
+
+1. **TCP Connection**: The server accepts a raw TCP connection on port 42069
+2. **Chunked Reading**: Data is read from the socket in 8-byte chunks to simulate real network conditions
+3. **Request Parsing**: The raw bytes are parsed into:
+   - Request line (method, target, HTTP version)
+   - Headers (key-value pairs)
+   - Body (request payload)
+4. **Handler Execution**: The parsed request is routed to your custom handler function
+5. **Response Generation**: A proper HTTP/1.1 response is constructed with:
+   - Status line (e.g., `HTTP/1.1 200 OK`)
+   - Headers (`Content-Length`, `Connection`, `Content-Type`)
+   - Body (the actual response data)
+6. **Write Back**: The response is written back to the TCP connection
+7. **Connection Close**: The connection is closed (HTTP/1.1 with `Connection: close`)
 
 ### Core Components
 
-#### 1. Request Parser (`internal/request/`)
-- **HTTP Method Validation**: Regex-based validation for HTTP methods (GET, POST, etc.)
-- **Request Target Parsing**: URI validation and parsing
-- **HTTP Version Parsing**: Version string validation (HTTP/1.1, HTTP/2, etc.)
-- **Request Line Parser**: Complete HTTP request line parsing with error handling
-- **State Management**: Tracks parsing state (initialized, processing, done)
+#### 📦 `internal/request/` - Request Parsing
+The heart of HTTP request parsing:
+- **Method Validation**: Regex-based validation for HTTP methods (GET, POST, PUT, DELETE, etc.)
+- **Request Target Parsing**: URI validation and extraction
+- **HTTP Version Parsing**: Validates HTTP version strings (HTTP/1.1, HTTP/2, etc.)
+- **Header Parsing**: Parses key-value header pairs from the request
+- **Body Reading**: Reads request body based on Content-Length header
+- **State Machine**: Manages parsing state (request line → headers → body)
 
-#### 2. TCP Listener (`cmd/tcplistener/`)
-- **TCP Server**: Listens on port 42069 for incoming connections
-- **Chunked Reading**: Reads data in 8-byte chunks to simulate real network conditions
-- **Line-based Processing**: Handles CRLF-delimited HTTP messages
-- **Concurrent Handling**: Uses goroutines for connection management
+#### 📦 `internal/response/` - Response Generation
+Handles creating proper HTTP responses:
+- **Status Line Writing**: Formats status codes (200, 400, 500) into HTTP status lines
+- **Header Writing**: Writes headers with proper CRLF formatting
+- **Body Writing**: Writes response body with correct Content-Length
+- **Default Headers**: Automatically adds `Content-Length`, `Connection: close`, and `Content-Type`
 
-#### 3. UDP Sender (`cmd/udpsender/`)
-- **Test Client**: Sends messages to the TCP listener for testing
-- **Interactive Mode**: Command-line interface for manual testing
+#### 📦 `internal/server/` - HTTP Server
+The main server implementation:
+- **TCP Listener**: Creates and manages the TCP listener socket
+- **Connection Handling**: Accepts incoming connections and spawns goroutines
+- **Handler Interface**: Defines the handler function signature
+- **Error Management**: Converts handler errors into proper HTTP error responses
+- **Graceful Shutdown**: Supports clean server shutdown
 
-## Key Learning Concepts
+#### 📦 `internal/headers/` - Header Management
+Manages HTTP header parsing and storage:
+- **Header Parsing**: Extracts key-value pairs from header lines
+- **Header Validation**: Ensures headers follow the `Key: Value` format
+- **Storage**: Provides a map-based structure for header access
 
-### I/O Readers and File Descriptors
-- Understanding how `io.Reader` interface works
-- File descriptor management in Unix-like systems
-- Difference between file I/O (position-based) and network I/O (stream-based)
+#### 📦 `internal/httpErrors/` - Error Handling
+Centralized error management:
+- **Exception Types**: Defines constants for different error types
+- **Error Messages**: Maps exception types to error message generators
+- **Formatted Errors**: Provides consistent error formatting with context
 
-### HTTP/1.1 Protocol Details
-- Request line format: `METHOD request-target HTTP-version`
-- CRLF line termination (`\r\n`)
-- Header parsing and validation
-- State machine implementation
+#### 📦 `internal/buffer/` - Dynamic Buffer
+Custom buffer implementation for handling streaming data:
+- **Dynamic Growth**: Automatically doubles buffer size when needed
+- **Buffer Shifting**: Efficiently shifts data after partial reads
+- **Capacity Management**: Maintains minimum buffer sizes for performance
 
-### Network Programming
-- TCP vs UDP differences
-- Socket programming fundamentals
-- Chunked data reading
-- Connection lifecycle management
-
-## Project Structure
+### Project Structure
 
 ```
 httpfromtcp/
 ├── cmd/
-│   ├── tcplistener/     # TCP server implementation
-│   └── udpsender/       # UDP test client
+│   ├── httpserver/        # Main HTTP server with routing
+│   ├── tcplistener/       # Basic TCP listener (development/debugging)
+│   └── udpsender/         # UDP test client for sending test data
 ├── internal/
-│   └── request/         # HTTP request parsing logic
-├── go.mod              # Go module definition
-└── messages.txt        # Test data
+│   ├── request/           # HTTP request parsing
+│   ├── response/          # HTTP response generation
+│   ├── server/            # Server implementation
+│   ├── headers/           # Header parsing and management
+│   ├── httpErrors/        # Error handling
+│   └── buffer/            # Dynamic buffer implementation
+├── docker-compose.yaml    # Docker Compose configuration
+├── Dockerfile             # Multi-stage Docker build
+├── go.mod                 # Go module definition
+└── messages.txt           # Test data
 ```
 
-## Usage
+## Key Learning Concepts
 
-### Start the TCP Listener
+### 1. Protocol Implementation
+Understanding HTTP/1.1 at the byte level:
+- Request line format: `METHOD request-target HTTP-version\r\n`
+- Header format: `Key: Value\r\n`
+- Header termination: Empty line `\r\n\r\n`
+- Body length determined by `Content-Length` header
+
+### 2. TCP Socket Programming
+Working directly with TCP connections:
+- Accepting connections from a listener
+- Reading from a stream-based socket (no seek, no rewind)
+- Writing responses back through the socket
+- Managing connection lifecycle
+
+### 3. State Machine Design
+Parsing HTTP requests requires state management:
+- **State 1**: Parse request line
+- **State 2**: Parse headers (line by line)
+- **State 3**: Parse body (based on Content-Length)
+- Transitions happen as parsing progresses
+
+### 4. I/O Patterns
+Understanding Go's I/O interfaces:
+- `io.Reader`: Reading from network connections
+- `io.Writer`: Writing responses back to clients
+- Buffering strategies for efficient I/O
+- Chunked reading to simulate real network conditions
+
+### 5. Concurrent Programming
+Using goroutines for handling multiple connections:
+- One goroutine per connection
+- Non-blocking accept loop
+- Clean resource cleanup with deferred connection closes
+
+## Handler API
+
+Create custom handlers by matching this signature:
+
+```go
+func handler(w io.Writer, req *request.Request) *server.HandlerError {
+    // Check the request target (route)
+    switch req.RequestLine.RequestTarget {
+    case "/your-route":
+        // Return an error response
+        return &server.HandlerError{
+            StatusCode: response.HttpStatusBadRequest,
+            Message: []byte("Error message\n"),
+        }
+    }
+    
+    // Write success response
+    w.Write([]byte("Success response\n"))
+    return nil  // nil = 200 OK
+}
+```
+
+The handler receives:
+- `w io.Writer`: Write your response body here
+- `req *request.Request`: Contains method, target, headers, and body
+
+Return:
+- `nil`: Generates a 200 OK response with your written content
+- `*server.HandlerError`: Generates an error response with the specified status code
+
+## Implementation Highlights
+
+- ✅ **Full HTTP/1.1 request parsing** (method, target, version, headers, body)
+- ✅ **HTTP response generation** (status line, headers, body)
+- ✅ **Custom routing** via handler functions
+- ✅ **Error handling** with proper HTTP status codes
+- ✅ **Concurrent connection handling** with goroutines
+- ✅ **Dynamic buffer management** for streaming data
+- ✅ **Graceful shutdown** with signal handling
+- ✅ **Docker support** for easy deployment
+
+## Technologies Used
+
+- **Go 1.25.1+**: The only dependency
+- **Standard Library Only**: No external HTTP libraries
+- **Docker**: For containerized deployment
+
+## Why This Project?
+
+This project exists to:
+1. **Understand HTTP deeply** - By building it from scratch, you understand every detail
+2. **Learn TCP networking** - Work directly with sockets and streams
+3. **Master Go I/O** - Understand readers, writers, and buffering
+4. **Practice systems programming** - Deal with bytes, state machines, and protocols
+
+This is a learning project focused on understanding rather than production use. For production, use Go's excellent `net/http` package!
+
+## Development
+
+The project includes a TCP listener for debugging raw requests:
+
 ```bash
+# Start the TCP listener (shows parsed request details)
 go run cmd/tcplistener/main.go
 ```
 
-### Send Test Messages
-```bash
-go run cmd/udpsender/main.go
-```
+This prints detailed information about each incoming request for debugging purposes.
 
-## Implementation Status
+## License
 
-- ✅ HTTP method validation
-- ✅ Request target parsing
-- ✅ HTTP version parsing
-- ✅ Request line parsing
-- ✅ TCP server with chunked reading
-- ✅ Basic state management
-- 🚧 Header parsing (TODO)
-- 🚧 Response generation (TODO)
-- 🚧 Error handling improvements (TODO)
+MIT
 
-## Learning Goals
-
-This project demonstrates:
-1. **Low-level network programming** - Working directly with TCP sockets
-2. **Protocol implementation** - Building HTTP from the ground up
-3. **Go concurrency** - Using goroutines for connection handling
-4. **I/O patterns** - Understanding readers, writers, and file descriptors
-5. **State management** - Tracking protocol parsing states
-
-## Dependencies
-
-- Go 1.25.1+
-- Standard library only (no external HTTP libraries)
-
-## Development Notes
-
-- Uses 8-byte buffer size for chunked reading to simulate real network conditions
-- Implements custom `io.Reader` patterns for learning purposes
-- Focus on understanding the protocol rather than production-ready implementation
+---
