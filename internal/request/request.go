@@ -154,7 +154,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		n, err := request.parse(buf)
 
 		if errReader == io.EOF && request.Headers.GetContentLength() > len(request.Body) {
-			return nil, err
+			return nil, httpErr.ExceptionMessages[httpErr.BodyTooShort]()
 		}
 
 		if err != nil {

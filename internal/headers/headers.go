@@ -2,6 +2,7 @@ package headers
 
 import (
 	"fmt"
+	errHttp "httpfromtcp/internal/httperrors"
 	"regexp"
 	"strconv"
 	s "strings"
@@ -14,7 +15,7 @@ func validateHeaderSyntax(header string) (string, error){
 	regex := regexp.MustCompile(`^[A-Za-z0-9!#$%&'*+\-.^_` + "`" + `|~]+:\s*.+$`)
 	
 	if(!regex.MatchString(header)) { 
-		return "", fmt.Errorf("invalid http method")
+		return "", errHttp.ExceptionMessages[errHttp.InvalidHttpHeader](header)
 	}
 	
 	return header, nil
@@ -49,7 +50,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		 _, err = validateHeaderSyntax(trimedHeader)
 
 		if err != nil {
-			return bytesParsed, false, fmt.Errorf("error: invalid header syntax")
+			return bytesParsed, false, errHttp.ExceptionMessages[errHttp.InvalidHttpHeader](header)
 		}
 
 	 	keyValue := s.Split(trimedHeader, ":")

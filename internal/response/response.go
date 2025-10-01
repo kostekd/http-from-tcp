@@ -3,6 +3,7 @@ package response
 import (
 	"fmt"
 	h "httpfromtcp/internal/headers"
+	httpErr "httpfromtcp/internal/httperrors"
 	"io"
 )
 
@@ -28,7 +29,7 @@ func WriteStatusLine (w io.Writer, statusCode StatusCode) error {
 		w.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n"))
 		return nil
 	default:
-		return fmt.Errorf("error: unrecognized statusCode")
+		return httpErr.ExceptionMessages[httpErr.UnrecognizedStatusCode]()
 	}
 }
 
