@@ -1,13 +1,17 @@
 package request
 
 import (
-	"fmt"
 	"httpfromtcp/internal/buffer"
 	"httpfromtcp/internal/headers"
+	httpErr "httpfromtcp/internal/httperrors"
 	"io"
 	"regexp"
 	s "strings"
 )
+
+const BUFFER_SIZE = 8
+const NOTHING_PARSED = 0
+const CRLF = "\r\n"
 
 type ParsingState string
 
@@ -18,15 +22,11 @@ const (
 	Done ParsingState = "Done"
 )
 
-const BUFFER_SIZE = 8
-const NOTHING_PARSED = 0
-const CRLF = "\r\n"
-
 func httpMethodParser(str string) (string, error) {
 	regex := regexp.MustCompile(`^[A-Z]+$`)
 
 	if(!regex.MatchString(str)) { 
-		return "", fmt.Errorf("invalid http method")
+		return "", httpErr.ExceptionMessages[httpErr.InvalidHttpMethod]()
 	}
 
 	return str, nil
@@ -36,7 +36,7 @@ func httpVersionParser(str string) (string, error) {
     regex := regexp.MustCompile(`^HTTP/\d+(\.\d+)*$`)
 
 	if(!regex.MatchString(str)) {
-		return "", fmt.Errorf("invalid HTTP version")
+		return "", httpErr.ExceptionMessages[httpErr.InvalidHttpMethod]()
 	}
 
 	return s.Split(str, "/")[1], nil;
@@ -46,7 +46,7 @@ func httpRequestTargetParser(str string) (string, error) {
 	regex := regexp.MustCompile(`^/([A-Za-z0-9._~!$&'()*+,;=:@%-]*(/[A-Za-z0-9._~!$&'()*+,;=:@%-]*)*)(\?[A-Za-z0-9._~!$&'()*+,;=:@%/?-]*)?(#[A-Za-z0-9._~!$&'()*+,;=:@%/?-]*)?$`)
 
 	if(!regex.MatchString(str)) {
-		return "", fmt.Errorf("invalid request target")
+		return "", httpErr.ExceptionMessages[httpErr.InvalidRequestTarget]()
 	}
 
 	return str, nil;
@@ -62,7 +62,7 @@ func parseRequestLine(data []byte, request *Request) (int, error) {
 	parts := s.Split(requestLine, " ")
 
 	if len(parts) != 3 {
-		return 0, fmt.Errorf(`invalid request line format. Requires 3 properties. Received %d`, len(requestLine))	
+		return 0, httpErr.ExceptionMessages[httpErr.InvalidRequestLineFormat](len(requestLine))
 	}
 
 	method, err := httpMethodParser(parts[0])
@@ -154,7 +154,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		n, err := request.parse(buf)
 
 		if errReader == io.EOF && request.Headers.GetContentLength() > len(request.Body) {
-			return nil, fmt.Errorf("error: body too short")
+			return nil, err
 		}
 
 		if err != nil {
