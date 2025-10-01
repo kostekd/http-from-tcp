@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  httpserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: httpfromtcp-server
+    ports:
+      - "42069:42069"
+    restart: unless-stopped
+    networks:
+      - httpfromtcp-network
+
+networks:
+  httpfromtcp-network:
+    driver: bridge
