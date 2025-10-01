@@ -9,7 +9,14 @@ import (
 	s "strings"
 )
 
-type State int
+type ParsingState string
+
+const (
+	Initialized ParsingState = "initialized"
+	RequestLineParsed ParsingState = "requestLineParsed"
+	HeadersParsed ParsingState = "headersParsed"
+	Done ParsingState = "Done"
+)
 
 const BUFFER_SIZE = 8
 const NOTHING_PARSED = 0
@@ -85,40 +92,39 @@ type Request struct {
 	RequestLine RequestLine
 	Headers headers.Headers
 	Body []byte
-	// State values:
-	// 0 - initialized
-	// 1 - request line parsed
-	// 2 - headers parsed
-	// 3 - done (body parsed)
-	State 		int
+	State ParsingState
+}
+
+func (r *Request) done() bool {
+	return r.State == Done
 }
 
 func (r *Request) parse(data *buffer.Buf) (int, error) { 
 	switch r.State {
-	case 0:
+	case Initialized:
 		n, err := parseRequestLine(data.B, r)
 		if n > 0 {
-			r.State = 1
+			r.State = RequestLineParsed
 		}
 		return n, err
-	case 1: 
+	case RequestLineParsed: 
 		n, done, err := r.Headers.Parse(data.B)
 		if done {
 			contentLength := r.Headers.GetContentLength()
 			//skip last step because there is no body to be parsed
 			if contentLength == 0 {
-				r.State = 3
+				r.State = Done
 			} else {
-				r.State = 2
+				r.State = HeadersParsed
 			}
 			return n, err
 		}
 		return n, err
-	case 2:
+	case HeadersParsed:
 		contentLength := r.Headers.GetContentLength()
 		r.Body = append(r.Body, data.B[:data.R]...)
 		if len(r.Body) == contentLength {
-			r.State = 3
+			r.State = Done
 		}
 		return data.R, nil
 	}
@@ -133,13 +139,13 @@ type RequestLine struct {
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	request := &Request{
-		State: 0,
+		State: Initialized,
 		Headers: headers.Headers{},
 	}
 
 	buf := buffer.New(BUFFER_SIZE)
 	
-	for request.State != 3 {
+	for !request.done() {
 		chunk, errReader := reader.Read(buf.B[buf.R:])
 		buf.R += chunk
 		if errReader != nil && errReader != io.EOF {
