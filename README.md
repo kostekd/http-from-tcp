@@ -15,9 +15,7 @@ All of this is built directly on top of TCP sockets without using Go's `net/http
 
 ## Quick Start with Docker
 
-The easiest way to run this project is using Docker:
-
-```bash
+The easiest way to run this project is using Docker:```bash
 # Build and start the server
 docker-compose up --build
 
@@ -78,7 +76,7 @@ When a client connects to the server, here's what happens:
 
 ### Core Components
 
-#### 📦 `internal/request/` - Request Parsing
+#### `internal/request/` - Request Parsing
 The heart of HTTP request parsing:
 - **Method Validation**: Regex-based validation for HTTP methods (GET, POST, PUT, DELETE, etc.)
 - **Request Target Parsing**: URI validation and extraction
@@ -87,14 +85,14 @@ The heart of HTTP request parsing:
 - **Body Reading**: Reads request body based on Content-Length header
 - **State Machine**: Manages parsing state (request line → headers → body)
 
-#### 📦 `internal/response/` - Response Generation
+#### `internal/response/` - Response Generation
 Handles creating proper HTTP responses:
 - **Status Line Writing**: Formats status codes (200, 400, 500) into HTTP status lines
 - **Header Writing**: Writes headers with proper CRLF formatting
 - **Body Writing**: Writes response body with correct Content-Length
 - **Default Headers**: Automatically adds `Content-Length`, `Connection: close`, and `Content-Type`
 
-#### 📦 `internal/server/` - HTTP Server
+#### `internal/server/` - HTTP Server
 The main server implementation:
 - **TCP Listener**: Creates and manages the TCP listener socket
 - **Connection Handling**: Accepts incoming connections and spawns goroutines
@@ -102,19 +100,19 @@ The main server implementation:
 - **Error Management**: Converts handler errors into proper HTTP error responses
 - **Graceful Shutdown**: Supports clean server shutdown
 
-#### 📦 `internal/headers/` - Header Management
+#### `internal/headers/` - Header Management
 Manages HTTP header parsing and storage:
 - **Header Parsing**: Extracts key-value pairs from header lines
 - **Header Validation**: Ensures headers follow the `Key: Value` format
 - **Storage**: Provides a map-based structure for header access
 
-#### 📦 `internal/httpErrors/` - Error Handling
+#### `internal/httpErrors/` - Error Handling
 Centralized error management:
 - **Exception Types**: Defines constants for different error types
 - **Error Messages**: Maps exception types to error message generators
 - **Formatted Errors**: Provides consistent error formatting with context
 
-#### 📦 `internal/buffer/` - Dynamic Buffer
+#### `internal/buffer/` - Dynamic Buffer
 Custom buffer implementation for handling streaming data:
 - **Dynamic Growth**: Automatically doubles buffer size when needed
 - **Buffer Shifting**: Efficiently shifts data after partial reads
@@ -209,14 +207,14 @@ Return:
 
 ## Implementation Highlights
 
-- ✅ **Full HTTP/1.1 request parsing** (method, target, version, headers, body)
-- ✅ **HTTP response generation** (status line, headers, body)
-- ✅ **Custom routing** via handler functions
-- ✅ **Error handling** with proper HTTP status codes
-- ✅ **Concurrent connection handling** with goroutines
-- ✅ **Dynamic buffer management** for streaming data
-- ✅ **Graceful shutdown** with signal handling
-- ✅ **Docker support** for easy deployment
+- **Full HTTP/1.1 request parsing** (method, target, version, headers, body)
+- **HTTP response generation** (status line, headers, body)
+- **Custom routing** via handler functions
+- **Error handling** with proper HTTP status codes
+- **Concurrent connection handling** with goroutines
+- **Dynamic buffer management** for streaming data
+- **Graceful shutdown** with signal handling
+- **Docker support** for easy deployment
 
 ## Technologies Used
 
@@ -250,3 +248,4 @@ This prints detailed information about each incoming request for debugging purpo
 MIT
 
 ---
+
